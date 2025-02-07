@@ -31,4 +31,4 @@ Database (SQLite)
 SQLite database to store user information, books, and loans.
 
 ## Clone the repository:
-git clone https://github.com/yourusername/library-management-system.git
+git clone https://github.com/AmosNudel/library_django_axios.git
