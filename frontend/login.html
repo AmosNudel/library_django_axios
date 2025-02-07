@@ -1,0 +1,77 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <!-- Include Axios CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Include JWT Decode CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <a href="index.html">Home</a>
+    </header>
+    <h2>Login</h2>
+    
+    <label for="username">Username:</label><br>
+    <input type="text" id="username" name="username" required><br><br>
+
+    <label for="password">Password:</label><br>
+    <input type="password" id="password" name="password" required><br><br>
+
+    <button id="loginBtn">Login</button>
+
+    <p id="error-message" style="color: red;"></p>
+
+    <script>
+        // Get elements
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMessage = document.getElementById('error-message');
+
+        // Add event listener to login button
+        loginBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+
+            // Get username and password values
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // Send login request via Axios
+            axios.post('http://localhost:8000/login/', {
+                username: username,
+                password: password
+            })
+            .then((response) => {
+                // Handle successful login
+                if (response.status === 200) {
+                    console.log('Login response:', response.data);
+                    const accessToken = response.data.access;
+                    const refreshToken = response.data.refresh;
+
+                    // Store tokens in localStorage
+                    localStorage.setItem('access', accessToken);
+                    localStorage.setItem('refresh', refreshToken);
+
+                    // Decode the JWT token to extract the is_staff value
+                    const decodedToken = jwt_decode(accessToken);
+                    const isStaff = decodedToken.is_staff;
+
+                    // Redirect based on the is_staff value
+                    if (isStaff) {
+                        window.location.href = 'http://127.0.0.1:5500/frontend/staff_page.html'; // Redirect to staff page
+                    } else {
+                        window.location.href = 'http://127.0.0.1:5500/frontend/customer_page.html'; // Redirect to user page
+                    }
+                }
+            })
+            .catch((error) => {
+                // Handle login failure
+                console.error('Login error:', error);
+                errorMessage.textContent = 'Invalid username or password';
+            });
+        });
+    </script>
+</body>
+</html>

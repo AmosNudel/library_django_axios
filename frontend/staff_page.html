@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Page</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Internal CSS for the Links as Cards */
+        .card-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin: 20px;
+        }
+
+        .card {
+            width: 48%; /* 50% minus some gap space */
+            height: 33vh; /* A third of the screen height */
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: #333;
+            font-size: 1.2rem;
+            text-decoration: none;
+        }
+
+        .card:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="index.html">Home</a>
+        
+        <span id="username"></span>
+    </header>
+    <div class="card-container">
+        <a href="book_manage.html" class="card">Manage Books</a>
+        <a href="loan_manage.html" class="card">Manage Loans</a>
+    </div>
+
+<script>
+    const getAuthToken = () => {
+        const token = localStorage.getItem('access');
+        console.log('Token:', token);
+        return token;
+    };
+
+    const getUsernameFromToken = (token) => {
+        try {
+            const decoded = jwt_decode(token);
+            return decoded.username;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    window.onload = () => {
+        const token = getAuthToken();
+        const username = token ? getUsernameFromToken(token) : null;
+        document.getElementById('username').innerText = username ? `Hello, ${username}` : 'Hello, Staff';
+    };
+</script>
+
+</body>
+</html>

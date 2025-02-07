@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Update</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <a href="index.html">Home</a>
+        <a href="book_manage.html">Back</a>
+        <a href="staff_page.html">Dashboard</a>
+    </header>
+
+    <h2>Update Book</h2>
+
+    <!-- Form to update book details -->
+    <div>
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" required>
+
+        <label for="author">Author:</label>
+        <input type="text" id="author" name="author" required>
+
+        <label for="year_published">Year Published:</label>
+        <input type="number" id="year_published" name="year_published" required>
+
+        <label for="type">Type:</label>
+        <select id="type" name="type">
+            <option value="1">Up to 10 days</option>
+            <option value="2">Up to 5 days</option>
+            <option value="3">Up to 2 days</option>
+        </select>
+
+        <label for="image">Image:</label>
+        <input type="file" id="image" name="image">
+
+        <button onclick="updateBook()">Update</button>
+    </div>
+
+    <script>
+        // Get the authentication token
+        const getAuthToken = () => {
+            const token = localStorage.getItem('access');
+            return token;
+        };
+
+        // Fetch the book ID from the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookId = urlParams.get('id');
+
+        // When the page loads, fetch book data and populate the form
+        window.onload = function() {
+            const token = getAuthToken();
+            axios.get(`http://localhost:8000/book/update/${bookId}/`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                }
+            })
+                .then(response => {
+                    const book = response.data;
+                    document.getElementById('title').value = book.title;
+                    document.getElementById('author').value = book.author;
+                    document.getElementById('year_published').value = book.year_published;
+                    document.getElementById('type').value = book.type;
+                })
+                .catch(error => {
+                    alert('Error loading book data: ' + error.response?.data?.detail || error.message);
+                });
+        };
+
+        // Function to update the book
+        function updateBook() {
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('author', document.getElementById('author').value);
+            formData.append('year_published', document.getElementById('year_published').value);
+            formData.append('type', document.getElementById('type').value);
+            formData.append('active', true);
+
+            const imageInput = document.getElementById('image');
+            if (imageInput.files.length > 0) {
+                formData.append('image', imageInput.files[0]);
+            }
+
+            const token = getAuthToken();
+            axios.put(`http://localhost:8000/book/upd/${bookId}/`, formData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data',
+                },
+            })
+                .then(response => {
+                    alert('Book updated successfully');
+                    // Optionally redirect or do something else after success
+                })
+                .catch(error => {
+                    alert('Error updating book: ' + error.response?.data?.detail || error.message);
+                });
+        }
+    </script>
+</body>
+</html>

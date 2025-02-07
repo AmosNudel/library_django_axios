@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Management</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header>
+        <a href="index.html">Home</a>
+        <a href="staff_page.html">Back</a>
+        <a href="loan_manage.html">Loan Managment</a>
+        <span id="username"></span>
+    </header>
+
+    <h1>Add New Book</h1>
+
+    <!-- Form for adding a new book -->
+    <div id="add-book">
+        <h2>Enter Book Details</h2>
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" required><br><br>
+
+        <label for="author">Author:</label>
+        <input type="text" id="author" name="author" required><br><br>
+
+        <label for="year">Year Published:</label>
+        <input type="number" id="year" name="year" required><br><br>
+
+        <label for="type">Book Type:</label>
+        <select id="type" name="type" required>
+            <option value="1">Up to 10 days</option>
+            <option value="2">Up to 5 days</option>
+            <option value="3">Up to 2 days</option>
+        </select><br><br>
+
+        <label for="image">Upload Image:</label>
+        <input type="file" id="image" name="image"><br><br>
+
+        <button id="add-book-btn">Add Book</button>
+    </div>
+
+    <section>
+        <!-- Search Section for Book by Title -->
+        <div id="search-section">
+            <h3>Search for a Book by Title</h3>
+            <input type="text" id="search-title" placeholder="Enter book title">
+            <button onclick="searchBook()">Search</button>
+        </div>
+
+        <!-- Search Result Section -->
+        <div id="search-result"></div>
+
+        <h2>Active Books</h2>
+        <div id="books-list">
+            <!-- Books will be displayed here -->
+        </div>
+    </section>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" style="display:none;">
+        <div style="background: white; padding: 20px; border-radius: 5px;">
+            <h3>Are you sure you want to delete this book?</h3>
+            <button id="confirm-delete">Yes</button>
+            <button id="cancel-delete">No</button>
+        </div>
+    </div>
+    
+
+    <script>
+        // Get the authentication token
+        const getAuthToken = () => {
+            const token = localStorage.getItem('access');
+            return token;
+        };
+
+        // Decode JWT token to get the username
+        const getUsernameFromToken = (token) => {
+            try {
+                const decoded = jwt_decode(token);
+                return decoded.username;
+            } catch (error) {
+                return null;
+            }
+        };
+
+        // Load the username from the token when the page loads
+        window.onload = () => {
+            const token = getAuthToken();
+            const username = token ? getUsernameFromToken(token) : null;
+            document.getElementById('username').innerText = username ? `Hello, ${username}` : 'Hello, Staff';
+            fetchBooks();
+        };
+
+        // Fetch active books from the API when the page loads
+        function fetchBooks() {
+            axios.get('http://localhost:8000/books/')
+                .then(function (response) {
+                    const books = response.data;
+                    const booksListElement = document.getElementById('books-list');
+
+                    if (books.length === 0) {
+                        booksListElement.innerHTML = "<p>No active books available.</p>";
+                    } else {
+                        let booksHtml = "<ul>";
+                        books.forEach(function (book) {
+                            booksHtml += `
+                             <li>
+                                 <h3>${book.title}</h3>
+                                 <p>Author: ${book.author}</p>
+                                 <p>Year Published: ${book.year_published}</p>
+                                 <p>Type: ${book.type}</p>
+                                 <img src="http://127.0.0.1:8000/static${book.image}" alt="Product Image" width="100">
+                                 <button onclick="confirmDelete(${book.id})">Delete</button>
+                                 <button onclick="window.location.href='book_update.html?id=${book.id}'">Update</button>
+                             </li>
+                         `;
+                        });
+                        booksHtml += "</ul>";
+                        booksListElement.innerHTML = booksHtml;
+                    }
+                })
+                .catch(function (error) {
+                    console.log("Error fetching books:", error);
+                });
+        }
+
+
+
+        // Function to confirm delete action using a built-in confirmation dialog
+        function confirmDelete(bookId) {
+            const confirmed = confirm("Are you sure you want to delete this book?");
+
+            if (confirmed) {
+                const token = getAuthToken();
+                axios.delete(`http://localhost:8000/book/delete/${bookId}/`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    }
+                })
+                    .then(response => {
+                        alert("Book marked as inactive successfully.");
+                        fetchBooks(); // Refresh the book list
+                    })
+                    .catch(error => {
+                        console.error("Error deleting book:", error);
+                        alert("Failed to delete the book.");
+                    });
+            }
+        }
+
+        // Function to search for a book by its title
+        function searchBook() {
+            const title = document.getElementById('search-title').value.trim();
+
+            if (title === "") {
+                alert("Please enter a title to search.");
+                return;
+            }
+
+            axios.get(`http://localhost:8000/books/${title}/`)
+                .then(function (response) {
+                    const book = response.data;
+                    const searchResultElement = document.getElementById('search-result');
+                    searchResultElement.innerHTML = `
+                     <h3>Search Result:</h3>
+                     <h4>${book.title}</h4>
+                     <p>Author: ${book.author}</p>
+                     <p>Year Published: ${book.year_published}</p>
+                     <p>Type: ${book.type}</p>
+                     <img src="http://127.0.0.1:8000/static${book.image}" alt="Product Image" width="100">
+                     <button onclick="confirmDelete(${book.id})">Delete</button>
+                     <button onclick="window.location.href='book_update.html?id=${book.id}'">Update</button>
+                 `;
+                })
+                .catch(function (error) {
+                    const searchResultElement = document.getElementById('search-result');
+                    searchResultElement.innerHTML = "<p>No book found with that title.</p>";
+                });
+        }
+
+        // Handle the add book button click event
+        document.getElementById('add-book-btn').addEventListener('click', () => {
+            const token = getAuthToken();
+
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            const year = document.getElementById('year').value;
+            const type = document.getElementById('type').value;
+            const image = document.getElementById('image').files[0]; // Get the uploaded file
+
+            if (!title || !author || !year || !type) {
+                alert("Please fill in all the fields.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('author', author);
+            formData.append('year_published', year);
+            formData.append('type', type);
+            formData.append('active', true);
+            if (image) {
+                formData.append('image', image);
+            }
+
+            axios.post('http://localhost:8000/book/create/', formData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
+            })
+                .then(response => {
+                    alert("Book added successfully.");
+                    window.location.href = "staff_page.html";
+                })
+                .catch(error => {
+                    console.error("Error adding book:", error);
+                    alert("Failed to add the book.");
+                });
+        });
+    </script>
+</body>
+
+</html>

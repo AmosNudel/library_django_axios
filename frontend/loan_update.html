@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Loan</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header>
+        <a href="index.html">Home</a>
+        <a href="loan_manage.html">Back</a>
+        <a href="staff_page.html">Dashboard</a>
+    </header>
+
+    <h2>Update Loan</h2>
+
+    <!-- Form to update loan details -->
+    <div>
+        <label for="book-title">Book Title:</label>
+        <input type="text" id="book-title" name="book-title" required>
+
+        <label for="customer-username">Customer Username:</label>
+        <input type="text" id="customer-username" name="customer-username" required>
+
+        <label for="loan-date">Loan Date:</label>
+        <input type="date" id="loan-date" name="loan-date" required>
+
+        <label for="return-date">Return Date:</label>
+        <input type="date" id="return-date" name="return-date">
+
+        <button onclick="updateLoan()">Update</button>
+    </div>
+
+    <script>
+        // Get the authentication token
+        const getAuthToken = () => {
+            const token = localStorage.getItem('access');
+            return token;
+        };
+
+        // Fetch the loan ID from the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const loanId = urlParams.get('id');
+
+        // When the page loads, fetch loan data and populate the form
+        window.onload = function () {
+            const token = getAuthToken();
+            // Make sure to use the correct URL for fetching the loan data (GET method)
+            axios.get(`http://localhost:8000/loan/${loanId}/`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                }
+            })
+                .then(response => {
+                    const loan = response.data;
+                    // Populate the form fields with loan data
+                    document.getElementById('book-title').value = loan.book_title;
+                    document.getElementById('customer-username').value = loan.customer_username;
+                    document.getElementById('loan-date').value = loan.loan_date.split('T')[0]; // Format date for input
+                    document.getElementById('return-date').value = loan.return_date ? loan.return_date.split('T')[0] : ''; // Format date for input
+                })
+                .catch(error => {
+                    alert('Error loading loan data: ' + (error.response?.data?.detail || error.message));
+                });
+        };
+
+        // Function to update the loan
+        function updateLoan() {
+            const token = getAuthToken();
+            const updatedLoan = {
+                book_title: document.getElementById('book-title').value,
+                customer_username: document.getElementById('customer-username').value,
+                loan_date: document.getElementById('loan-date').value,
+                return_date: document.getElementById('return-date').value || null,
+            };
+
+            axios.put(`http://localhost:8000/loan/update/${loanId}/`, updatedLoan, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            })
+                .then(response => {
+                    alert('Loan updated successfully');
+                    window.location.href = "loan_manage.html"; // Redirect back to loan management page
+                })
+                .catch(error => {
+                    alert('Error updating loan: ' + (error.response?.data?.detail || error.message));
+                });
+        }
+    </script>
+</body>
+
+</html>

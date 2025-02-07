@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Loans</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <a href="index.html">Home</a>
+        <a href="customer_page.html">Browse Books</a>
+        <span id="username"></span>
+    </header>
+
+    <!-- Overdue Loans Section -->
+    <div id="overdue-loan-list">
+        <h2>My Overdue Loans</h2>
+        <ul id="overdue-loans"></ul> <!-- Overdue loans will be populated here -->
+    </div>
+
+    <!-- Active Loans Section -->
+    <div id="active-loan-list">
+        <h2>My Active Loans</h2>
+        <ul id="active-loans"></ul> <!-- Active loans will be populated here -->
+    </div>
+
+    <script>
+        // Retrieve the authentication token from localStorage
+        const getAuthToken = () => {
+            const token = localStorage.getItem('access');
+            return token;
+        };
+
+        // Decode JWT to extract the username
+        const getUsernameFromToken = (token) => {
+            try {
+                const decoded = jwt_decode(token);
+                return decoded.username;
+            } catch (error) {
+                return null;
+            }
+        };
+
+        // Fetch loans based on the provided URL (active or overdue)
+        const getUserLoans = async (endpoint, displayFunction) => {
+            const token = getAuthToken();
+            if (!token) {
+                alert("No token found. Please log in.");
+                return;
+            }
+
+            try {
+                const response = await axios.get(endpoint, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    }
+                });
+
+                if (response.status === 200) {
+                    const loans = response.data;
+                    displayFunction(loans);
+                } else {
+                    console.log("Failed to fetch loans: ", response.status);
+                }
+            } catch (error) {
+                console.error('Error fetching loans:', error);
+            }
+        };
+
+        // Format the date in a user-friendly way (e.g., "February 6, 2025")
+        const formatDate = (dateString) => {
+            const date = new Date(dateString);  // Convert string to Date object
+            return date.toLocaleDateString('en-US', {  // Format it as "Month Day, Year"
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+            });
+        };
+
+        // Handle the return of a loan (make it inactive)
+        const returnLoan = async (loanId) => {
+            const token = getAuthToken();
+            if (!token) {
+                alert("No token found. Please log in.");
+                return;
+            }
+
+            try {
+                const response = await axios.delete(`http://localhost:8000/loan/return/${loanId}/`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    }
+                });
+
+                if (response.status === 200) {
+                    alert("Loan returned successfully!");
+                    // Remove the loan from the UI or update the UI to reflect the change
+                    const loanItem = document.getElementById(`loan-${loanId}`);
+                    loanItem.remove();  // Remove the loan item from the list
+                } else {
+                    console.log("Failed to return loan: ", response.status);
+                }
+            } catch (error) {
+                console.error('Error returning loan:', error);
+            }
+        };
+
+        // Display loans in the UI (generic function for both active and overdue loans)
+        const displayLoans = (loans, listId) => {
+            const loansListElement = document.getElementById(listId);
+            loansListElement.innerHTML = ''; // Clear the list before adding new data
+
+            if (loans.length === 0) {
+                loansListElement.innerHTML = '<li>No loans found.</li>';
+            } else {
+                loans.forEach((loan) => {
+                    const loanItem = document.createElement('li');
+                    loanItem.id = `loan-${loan.id}`;  // Set a unique ID for each loan item
+
+                    const loanDate = formatDate(loan.loan_date);  // Format loan date
+                    const returnDate = formatDate(loan.return_date);  // Format return date
+
+                    loanItem.textContent = `Book: ${loan.book_title}, Loan Date: ${loanDate}, Return Date: ${returnDate}`;
+
+                    // Create a "Return" button for the loan
+                    const returnButton = document.createElement('button');
+                    returnButton.textContent = "Return";
+                    returnButton.onclick = () => returnLoan(loan.id);  // Set the return action on click
+
+                    // Append the button to the loan item
+                    loanItem.appendChild(returnButton);
+
+                    loansListElement.appendChild(loanItem);
+                });
+            }
+        };
+
+        window.onload = () => {
+            const token = getAuthToken();
+            const username = token ? getUsernameFromToken(token) : null;
+            document.getElementById('username').innerText = username ? `${username}'s Loans` : 'My Loans';
+
+            // Fetch active loans
+            getUserLoans('http://localhost:8000/loans/my/', (loans) => displayLoans(loans, 'active-loans'));
+
+            // Fetch overdue loans
+            getUserLoans('http://localhost:8000/user/overdue-loans/', (loans) => displayLoans(loans, 'overdue-loans'));
+        };
+    </script>
+</body>
+</html>

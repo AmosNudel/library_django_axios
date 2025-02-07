@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <!-- Include Axios CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <a href="register.html">Register</a>
+        <a href="staff_register.html">Register a Staff Member</a>
+        <a href="login.html">Login</a>
+    </header>
+
+    <section>
+        
+        <!-- Search Section for Book by Title -->
+        <div id="search-section">
+            <h3>Search for a Book by Title</h3>
+            <input type="text" id="search-title" placeholder="Enter book title">
+            <button onclick="searchBook()">Search</button>
+        </div>
+
+        <!-- Search Result Section -->
+        <div id="search-result">
+            <!-- Search result will be displayed here -->
+        </div>
+
+        <h2>Active Books</h2>
+        <div id="books-list">
+            <!-- Books will be displayed here -->
+        </div>
+    </section>
+
+    <script>
+        // Fetch active books from the API when the page loads
+        axios.get('http://localhost:8000/books/')
+            .then(function (response) {
+                // Handle success
+                const books = response.data;
+                const booksListElement = document.getElementById('books-list');
+
+                if (books.length === 0) {
+                    booksListElement.innerHTML = "<p>No active books available.</p>";
+                } else {
+                    // Create a list of books dynamically
+                    let booksHtml = "<ul>";
+                    books.forEach(function(book) {
+                        booksHtml += `
+                            <li>
+                                <h3>${book.title}</h3>
+                                <p>Author: ${book.author}</p>
+                                <p>Year Published: ${book.year_published}</p>
+                                <p>Type: ${book.type}</p>
+                                <img src="http://127.0.0.1:8000/static${book.image}" alt="Product Image" width="100">
+                            </li>
+                        `;
+                    });
+                    booksHtml += "</ul>";
+                    booksListElement.innerHTML = booksHtml;
+                }
+            })
+            .catch(function (error) {
+                // Handle error
+                console.log("Error fetching books:", error);
+            });
+
+        // Function to search for a book by its title
+        function searchBook() {
+            const title = document.getElementById('search-title').value.trim();
+
+            if (title === "") {
+                alert("Please enter a title to search.");
+                return;
+            }
+
+            // Send a GET request to fetch the book by its title
+            axios.get(`http://localhost:8000/books/${title}/`)
+                .then(function(response) {
+                    // Handle success
+                    const book = response.data;
+                    const searchResultElement = document.getElementById('search-result');
+                    
+                    // Display the book if found
+                    searchResultElement.innerHTML = `
+                        <h3>Search Result:</h3>
+                        <h4>${book.title}</h4>
+                        <p>Author: ${book.author}</p>
+                        <p>Year Published: ${book.year_published}</p>
+                        <p>Type: ${book.type}</p>
+                        <img src="http://127.0.0.1:8000/static${book.image}" alt="Product Image" width="100">
+                    `;
+                })
+                .catch(function(error) {
+                    // Handle error (book not found)
+                    console.log("Error fetching book:", error);
+                    const searchResultElement = document.getElementById('search-result');
+                    searchResultElement.innerHTML = "<p>No book found with that title.</p>";
+                });
+        }
+    </script>
+</body>
+</html>

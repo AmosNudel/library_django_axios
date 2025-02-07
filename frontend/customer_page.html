@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Page</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <a href="index.html">Home</a>
+        <a href="customer_loans.html">My Loans</a>
+        <span id="username">Hello, Guest</span>
+    </header>
+
+    <section>
+        <div id="search-section">
+            <h3>Search for a Book by Title</h3>
+            <input type="text" id="search-title" placeholder="Enter book title">
+            <button onclick="searchBook()">Search</button>
+        </div>
+
+        <div id="search-result"></div>
+
+        <h2>Active Books</h2>
+        <div id="books-list"></div>
+    </section>
+
+    <script>
+        const getAuthToken = () => {
+            const token = localStorage.getItem('access');
+            console.log('Token:', token);
+            return token;
+        };
+
+        const getUsernameFromToken = (token) => {
+            try {
+                const decoded = jwt_decode(token);
+                return decoded.username;
+            } catch (error) {
+                return null;
+            }
+        };
+
+        window.onload = () => {
+            const token = getAuthToken();
+            const username = token ? getUsernameFromToken(token) : null;
+            document.getElementById('username').innerText = username ? `Hello, ${username}` : 'Hello, Guest';
+        };
+
+        // Fetch active books from the API when the page loads
+        axios.get('http://localhost:8000/books/')
+            .then(function (response) {
+                const books = response.data;
+                const booksListElement = document.getElementById('books-list');
+
+                if (books.length === 0) {
+                    booksListElement.innerHTML = "<p>No active books available.</p>";
+                } else {
+                    let booksHtml = "<ul>";
+                    books.forEach(function(book) {
+                        booksHtml += `
+                            <li>
+                                <h3>${book.title}</h3>
+                                <p>Author: ${book.author}</p>
+                                <p>Year Published: ${book.year_published}</p>
+                                <p>Type: ${book.type}</p>
+                                <img src="http://127.0.0.1:8000/static${book.image}" alt="Product Image" width="100">
+                                <button onclick="createLoan('${book.title}')">Create Loan</button>
+                            </li>
+                        `;
+                    });
+                    booksHtml += "</ul>";
+                    booksListElement.innerHTML = booksHtml;
+                }
+            })
+            .catch(function (error) {
+                console.log("Error fetching books:", error);
+            });
+
+        // Function to search for a book by its title
+        function searchBook() {
+            const title = document.getElementById('search-title').value.trim();
+
+            if (title === "") {
+                alert("Please enter a title to search.");
+                return;
+            }
+
+            // Send a GET request to fetch the book by its title
+            axios.get(`http://localhost:8000/books/${title}/`)
+                .then(function(response) {
+                    // Handle success
+                    const book = response.data;
+                    const searchResultElement = document.getElementById('search-result');
+                    
+                    // Display the book if found
+                    searchResultElement.innerHTML = `
+                        <h3>Search Result:</h3>
+                        <h4>${book.title}</h4>
+                        <p>Author: ${book.author}</p>
+                        <p>Year Published: ${book.year_published}</p>
+                        <p>Type: ${book.type}</p>
+                        <img src="http://127.0.0.1:8000/static${book.image}" alt="Product Image" width="100">
+                        <button onclick="createLoan('${book.title}')">Create Loan</button>
+                    `;
+                })
+                .catch(function(error) {
+                    // Handle error (book not found)
+                    console.log("Error fetching book:", error);
+                    const searchResultElement = document.getElementById('search-result');
+                    searchResultElement.innerHTML = "<p>No book found with that title.</p>";
+                });
+        }
+
+        // Function to create a loan (borrow a book)
+        function createLoan(bookTitle) {
+            const token = getAuthToken();
+            if (!token) {
+                alert("You must be logged in to create a loan.");
+                return;
+            }
+
+            const data = { book_title: bookTitle };
+
+            axios.post('http://localhost:8000/loan/create/', data, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            .then(function(response) {
+                alert("Loan created successfully!");
+            })
+            .catch(function(error) {
+                console.log("Error creating loan:", error);
+                alert("Failed to create loan. Please try again.");
+            });
+        }
+    </script>
+</body>
+</html>
